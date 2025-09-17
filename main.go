@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"pfaivre/ssem-simulator-go/ssem"
 )
 
@@ -14,9 +15,21 @@ func main() {
 	machine := ssem.Ssem{}
 
 	if len(os.Args) > 1 {
-		err := machine.ReadAsm(os.Args[1])
-		if err != nil {
-			panic(err)
+		path := os.Args[1]
+
+		switch filepath.Ext(path) {
+		case ".asm":
+			err := machine.ReadAsm(path)
+			if err != nil {
+				panic(err)
+			}
+		case ".snp":
+			err := machine.ReadSnp(path)
+			if err != nil {
+				panic(err)
+			}
+		default:
+			panic(fmt.Errorf("unknown file format"))
 		}
 	}
 

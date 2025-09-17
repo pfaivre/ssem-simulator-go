@@ -20,7 +20,7 @@ The result will appear on the 28th line in binary.
 - [ ] Core features
   - [x] Representation of the machine's memory
   - [x] Read assembly files (.asm)
-  - [ ] Read binary representation files (.snp)
+  - [x] Read binary representation files (.snp)
   - [ ] Core logic (instruction set)
   - [ ] Main loop
   - [ ] Improve readability (display option)
