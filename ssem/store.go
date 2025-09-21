@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// A word is representaed by a 32 bits integer
+// A word is represented by a 32 bits integer
 type Word int32
 
 // Contains the machine's memory
@@ -17,5 +17,7 @@ func (s Store) String() string {
 	for _, w := range s {
 		builder.WriteString(fmt.Sprintf("%032b\n", bits.Reverse32(uint32(w))))
 	}
-	return builder.String()
+
+	replacer := strings.NewReplacer("0", ".", "1", "#")
+	return replacer.Replace(builder.String())
 }

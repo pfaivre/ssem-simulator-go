@@ -21,7 +21,7 @@ The result will appear on the 28th line in binary.
   - [x] Representation of the machine's memory
   - [x] Read assembly files (.asm)
   - [x] Read binary representation files (.snp)
-  - [ ] Core logic (instruction set)
+  - [x] Core logic (instruction set)
   - [ ] Main loop
   - [ ] Improve readability (display option)
 - [ ] Interactive interface

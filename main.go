@@ -33,5 +33,7 @@ func main() {
 		}
 	}
 
+	machine.Run(100000)
+
 	fmt.Println(machine)
 }
