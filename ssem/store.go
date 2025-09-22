@@ -2,7 +2,6 @@ package ssem
 
 import (
 	"fmt"
-	"math/bits"
 	"strings"
 )
 
@@ -14,10 +13,33 @@ type Store [WORD_COUNT]Word
 
 func (s Store) String() string {
 	builder := strings.Builder{}
+	builder.Grow(1500) // takes approximately 1056 bytes to print the store
 	for _, w := range s {
-		builder.WriteString(fmt.Sprintf("%032b\n", bits.Reverse32(uint32(w))))
+		AppendBinary(&builder, w)
+		builder.WriteString("\n")
 	}
 
-	replacer := strings.NewReplacer("0", ".", "1", "#")
-	return replacer.Replace(builder.String())
+	return builder.String()
+}
+
+// var replacer = strings.NewReplacer("0", ".", "1", "#")
+
+func AppendBinary(b *strings.Builder, w Word) {
+	// b.WriteString(
+	// replacer.Replace(
+	// Reverse(fmt.Sprintf("%032b", uint32(w)))))
+	b.WriteString(Reverse(fmt.Sprintf("%032b", uint32(w))))
+}
+
+// Returns a new string with each rune in reverse order
+func Reverse(s string) string {
+	// TODO: consider swapping slices of bytes instead for more efficiency, if possible
+	// func Reverse(s []byte)
+	var b strings.Builder
+	b.Grow(len(s))
+	runes := []rune(s)
+	for i := len(runes) - 1; i >= 0; i-- {
+		b.WriteRune(runes[i])
+	}
+	return b.String()
 }

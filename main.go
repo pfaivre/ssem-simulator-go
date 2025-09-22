@@ -12,7 +12,7 @@ func main() {
 	fmt.Println("(Work in progress, not functional yet)")
 	fmt.Println()
 
-	machine := ssem.Ssem{}
+	machine := ssem.NewSsem()
 
 	if len(os.Args) > 1 {
 		path := os.Args[1]
@@ -33,7 +33,10 @@ func main() {
 		}
 	}
 
-	machine.Run(100000)
-
+	cycles, err := machine.Run(10000000000)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println(machine)
+	fmt.Printf("Completed in %d cycles\n", cycles)
 }

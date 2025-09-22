@@ -22,8 +22,10 @@ The result will appear on the 28th line in binary.
   - [x] Read assembly files (.asm)
   - [x] Read binary representation files (.snp)
   - [x] Core logic (instruction set)
-  - [ ] Main loop
+  - [x] Main loop
+  - [ ] Validate accuracy
   - [ ] Improve readability (display option)
+- [ ] Unit and functional tests
 - [ ] Interactive interface
   - [ ] Base interface
   - [ ] User input
@@ -33,7 +35,6 @@ The result will appear on the 28th line in binary.
   - [ ] Handle screen resize
   - [ ] Accurate speed execution
   - [ ] Help window
-- [ ] Unit and functional tests
 
 # SSEM specifications
 

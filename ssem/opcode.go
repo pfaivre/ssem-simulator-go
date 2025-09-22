@@ -50,14 +50,30 @@ var mnemonicsPrint = map[Opcode]string{
 	NUM:  "NUM",
 }
 
+var mnemonicsNeedOperand = map[Opcode]bool{
+	JMP:  true,
+	JRP:  true,
+	LDN:  true,
+	STO:  true,
+	SUB:  true,
+	SUB2: true,
+	CMP:  false,
+	STP:  false,
+	NUM:  true,
+}
+
 func FromString(s string) (Opcode, error) {
 	v, presence := mnemonicsMap[s]
 	if !presence {
-		return 0, fmt.Errorf("unknown mnemonic: %s", s)
+		return 0, fmt.Errorf("unknown mnemonic '%s'", s)
 	}
 	return v, nil
 }
 
 func (o Opcode) String() string {
 	return mnemonicsPrint[o]
+}
+
+func (o Opcode) NeedsOperand() bool {
+	return mnemonicsNeedOperand[o]
 }

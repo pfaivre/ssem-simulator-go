@@ -3,7 +3,6 @@ package ssem
 import (
 	"bufio"
 	"fmt"
-	"math/bits"
 	"os"
 	"strconv"
 	"strings"
@@ -37,6 +36,12 @@ type Ssem struct {
 	StopFlag bool
 }
 
+func NewSsem() *Ssem {
+	return &Ssem{
+		StopFlag: true,
+	}
+}
+
 // Type that has a state, loaded instructions and can be executed to modify that state
 type RunnableMachine interface {
 	InstructionCycle() error
@@ -46,8 +51,10 @@ type RunnableMachine interface {
 
 func (s Ssem) String() string {
 	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf("%032b CI\n", s.ci))
-	builder.WriteString(fmt.Sprintf("%032b A\n\n", s.a))
+	AppendBinary(&builder, s.ci)
+	builder.WriteString(fmt.Sprintf(" CI = %11d\n", s.ci))
+	AppendBinary(&builder, s.a)
+	builder.WriteString(fmt.Sprintf(" A  = %11d\n\n", s.a))
 	builder.WriteString(fmt.Sprint(s.store))
 	return builder.String()
 }
@@ -60,6 +67,8 @@ func (s Ssem) String() string {
 //	01 LDN 31   ;Load negative of counter
 //	02 SUB 0    ;"Increment" our counter
 //	...
+//
+// Notice: on error, the store can be left in a partially set state.
 func (s *Ssem) ReadAsm(file_name string) error {
 	store := Store{}
 
@@ -71,7 +80,10 @@ func (s *Ssem) ReadAsm(file_name string) error {
 
 	scanner := bufio.NewScanner(readFile)
 
+	lineNumber := 0
+
 	for scanner.Scan() {
+		lineNumber++
 		line := scanner.Text()
 		line = strings.Split(line, ";")[0]
 		line = strings.Trim(line, " ")
@@ -82,28 +94,36 @@ func (s *Ssem) ReadAsm(file_name string) error {
 
 		l := strings.Split(line, " ")
 
+		// Index
 		index, err := strconv.Atoi(l[0])
 		if err != nil {
-			return err
+			return fmt.Errorf("line %d: unable to parse numeric value '%s'", lineNumber, l[0])
 		}
 		if index < 0 || index > WORD_COUNT-1 {
-			return fmt.Errorf("index out of bound, expected from 0 to %d, got %d", WORD_COUNT-1, index)
+			return fmt.Errorf("line %d index out of bound, expected from 0 to %d, got %d", lineNumber, WORD_COUNT-1, index)
 		}
 
+		// Opcode
 		mnemonic, err := FromString(l[1])
 		if err != nil {
-			return err
+			return fmt.Errorf("line %d: %w", lineNumber, err)
 		}
 		if mnemonic != NUM {
 			store[index] = Word(mnemonic) << OPCODE_START
 		}
 
+		// Operand
 		data := 0
 		if len(l) > 2 {
+			if !mnemonic.NeedsOperand() {
+				return fmt.Errorf("line %d: mnemonic '%s' does not accept an operand", lineNumber, mnemonic)
+			}
 			data, err = strconv.Atoi(l[2])
 			if err != nil {
-				return err
+				return fmt.Errorf("line %d: unable to parse numeric value '%s'", lineNumber, l[2])
 			}
+		} else if mnemonic.NeedsOperand() {
+			return fmt.Errorf("line %d: mnemonic '%s' needs an operand", lineNumber, mnemonic)
 		}
 		store[index] |= Word(data) << ADDRESS_START
 	}
@@ -125,6 +145,8 @@ func (s *Ssem) ReadAsm(file_name string) error {
 //	01: 10011011111100100010000010001000
 //	02: 10000010000101101000100001010000
 //	...
+//
+// Notice: on error, the store can be left in a partially set state.
 func (s *Ssem) ReadSnp(file_name string) error {
 	store := Store{}
 
@@ -136,7 +158,10 @@ func (s *Ssem) ReadSnp(file_name string) error {
 
 	scanner := bufio.NewScanner(readFile)
 
+	lineNumber := 0
+
 	for scanner.Scan() {
+		lineNumber++
 		line := scanner.Text()
 		line = strings.Split(line, ";")[0]
 		line = strings.Trim(line, " ")
@@ -150,22 +175,22 @@ func (s *Ssem) ReadSnp(file_name string) error {
 		// Extracting index
 		index, err := strconv.Atoi(l[0])
 		if err != nil {
-			return err
+			return fmt.Errorf("line %d: unable to parse numeric value '%s'", lineNumber, l[0])
 		}
 		if index < 0 || index > WORD_COUNT-1 {
-			return fmt.Errorf("index out of bound, expected from 0 to %d, got %d", WORD_COUNT-1, index)
+			return fmt.Errorf("line %d: index out of bound, expected from 0 to %d, got %d", lineNumber, WORD_COUNT-1, index)
 		}
 
 		// Extracting word
 		if len(l) <= 1 {
-			return fmt.Errorf("missing word for index %d", index)
-		}
-		w, err := strconv.ParseUint(strings.Trim(l[1], " "), 2, 33)
-		if err != nil {
-			return err
+			return fmt.Errorf("line %d: missing word for index %d", lineNumber, index)
 		}
 		// Need to reverse the bit order as the SSEM stores number in reverse
-		store[index] = Word(bits.Reverse32(uint32(w)))
+		w, err := strconv.ParseInt(Reverse(strings.Trim(l[1], " ")), 2, 33)
+		if err != nil {
+			return fmt.Errorf("line %d: unable to parse binary value '%s'", lineNumber, strings.Trim(l[1], " "))
+		}
+		store[index] = Word(w)
 	}
 
 	s.store = store
@@ -255,16 +280,15 @@ func (s *Ssem) Execute(opcode Opcode, data Word) error {
 
 // Run the machine until STP is encountered or the given amount of cycles is reached.
 // Returns the number of cycles executed.
-func (s *Ssem) Run(max_cycles uint) (uint, error) {
+func (s *Ssem) Run(maxCycles uint) (uint, error) {
 	var i uint
 
-	// TODO: placeholder, replace this with a proper cycle loop
-	for i = 0; i < max_cycles; i++ {
+	for i = 0; i < maxCycles && !s.StopFlag; i++ {
 		if err := s.InstructionCycle(); err != nil {
 			return i, err
 		}
 		fmt.Println(s)
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond) // TODO: implement a proper speed target
 	}
 
 	return i, nil
