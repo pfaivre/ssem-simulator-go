@@ -36,7 +36,7 @@ func Reverse(s string) string {
 	// TODO: consider swapping slices of bytes instead for more efficiency, if possible
 	// func Reverse(s []byte)
 	var b strings.Builder
-	b.Grow(len(s))
+	b.Grow(len(s)) // Allocate the definitive size from the beginning to avoid multiple allocations
 	runes := []rune(s)
 	for i := len(runes) - 1; i >= 0; i-- {
 		b.WriteRune(runes[i])

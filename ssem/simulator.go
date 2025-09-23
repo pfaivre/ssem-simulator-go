@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // Number of words in the store
@@ -42,15 +41,9 @@ func NewSsem() *Ssem {
 	}
 }
 
-// Type that has a state, loaded instructions and can be executed to modify that state
-type RunnableMachine interface {
-	InstructionCycle() error
-	DecodeInstruction(ci Word) (Opcode, Word, error)
-	Run(max_cycles uint) (uint, error)
-}
-
 func (s Ssem) String() string {
 	builder := strings.Builder{}
+	builder.Grow(1500) // takes around 1200 bytes to print the store
 	AppendBinary(&builder, s.ci)
 	builder.WriteString(fmt.Sprintf(" CI = %11d\n", s.ci))
 	AppendBinary(&builder, s.a)
@@ -202,21 +195,16 @@ func (s *Ssem) ReadSnp(file_name string) error {
 }
 
 // Performs one cycle
-func (s *Ssem) InstructionCycle() error {
+func (s *Ssem) InstructionCycle() {
 	// Fetch
 	s.ci += 1
-	s.ci %= Word(len(s.store)) // CI loops back to the begining when it exceeds the store boundaries
+	s.ci %= WORD_COUNT // CI loops back to the begining when it exceeds the store boundaries
 
 	// Decode
 	opcode, data := s.DecodeInstruction(s.ci)
 
 	// Execute
-	err := s.Execute(opcode, data)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	s.Execute(opcode, data)
 }
 
 // Reads the address pointed at the given address and parses its given operation code and data
@@ -251,7 +239,7 @@ func (s *Ssem) DecodeInstruction(address Word) (Opcode, Word) {
 	return Opcode(opcode), Word(data)
 }
 
-func (s *Ssem) Execute(opcode Opcode, data Word) error {
+func (s *Ssem) Execute(opcode Opcode, data Word) {
 	switch opcode {
 	case JMP:
 		s.ci = s.store[data]
@@ -271,11 +259,7 @@ func (s *Ssem) Execute(opcode Opcode, data Word) error {
 		}
 	case STP:
 		s.StopFlag = true
-	case NUM:
-		return fmt.Errorf("encountered unexpected NUM command")
 	}
-
-	return nil
 }
 
 // Run the machine until STP is encountered or the given amount of cycles is reached.
@@ -284,11 +268,7 @@ func (s *Ssem) Run(maxCycles uint) (uint, error) {
 	var i uint
 
 	for i = 0; i < maxCycles && !s.StopFlag; i++ {
-		if err := s.InstructionCycle(); err != nil {
-			return i, err
-		}
-		fmt.Println(s)
-		time.Sleep(1 * time.Millisecond) // TODO: implement a proper speed target
+		s.InstructionCycle()
 	}
 
 	return i, nil

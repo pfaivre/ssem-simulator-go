@@ -23,9 +23,9 @@ The result will appear on the 28th line in binary.
   - [x] Read binary representation files (.snp)
   - [x] Core logic (instruction set)
   - [x] Main loop
-  - [ ] Validate accuracy
+  - [ ] Validate accuracy (with literature and best known simulators)
   - [ ] Improve readability (display option)
-- [ ] Unit and functional tests
+- [x] Unit and functional tests
 - [ ] Interactive interface
   - [ ] Base interface
   - [ ] User input
