@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Number of words in the store
@@ -42,12 +43,12 @@ func NewSsem() *Ssem {
 }
 
 func (s Ssem) String() string {
-	builder := strings.Builder{}
-	builder.Grow(1500) // takes around 1200 bytes to print the store
+	builder := strings.Builder{} // TODO: consider defining a long living builder to avoid constant allocation
+	builder.Grow(4096)           // takes around 2427 bytes to print the store
 	AppendBinary(&builder, s.ci)
-	builder.WriteString(fmt.Sprintf(" CI = %11d\n", s.ci))
+	builder.WriteString(fmt.Sprintf(" CI: %11d\n", s.ci))
 	AppendBinary(&builder, s.a)
-	builder.WriteString(fmt.Sprintf(" A  = %11d\n\n", s.a))
+	builder.WriteString(fmt.Sprintf(" A : %11d\n\n", s.a))
 	builder.WriteString(fmt.Sprint(s.store))
 	return builder.String()
 }
@@ -201,42 +202,10 @@ func (s *Ssem) InstructionCycle() {
 	s.ci %= WORD_COUNT // CI loops back to the begining when it exceeds the store boundaries
 
 	// Decode
-	opcode, data := s.DecodeInstruction(s.ci)
+	opcode, data := s.store.DecodeInstruction(s.ci)
 
 	// Execute
 	s.Execute(opcode, data)
-}
-
-// Reads the address pointed at the given address and parses its given operation code and data
-func (s *Ssem) DecodeInstruction(address Word) (Opcode, Word) {
-	word := s.store[address]
-
-	// Objective: extract opcode and data from word
-	// word: 0b00000000000000000100000000011000
-	//                         ===        =====
-	//        Operation code ---'           |
-	//                  Data ---------------'
-
-	// Step 1: extract instruction data (5 bits)
-	// word: 0b00000000000000000100000000011000
-	// mask: 0b00000000000000000000000000011111
-	//       ----------------------------------
-	//    &: 0b00000000000000000000000000011000
-	data := SSEM_DATA_MASK & word
-
-	// Step 2: Shift bits to put the opcode on the edge
-	// word: 0b00000000000000000100000000011000
-	//       ----------------------------------
-	// >>13: 0b00000000000000000000000000000010
-
-	// Step 3: Extract opcode (3 bits)
-	// word: 0b00000000000000000000000000000010
-	// mask: 0b00000000000000000000000000000111
-	//       ----------------------------------
-	//    &: 0b00000000000000000000000000000010
-	opcode := (SSEM_OPCODE_MASK & (word >> OPCODE_START))
-
-	return Opcode(opcode), Word(data)
 }
 
 func (s *Ssem) Execute(opcode Opcode, data Word) {
@@ -269,6 +238,22 @@ func (s *Ssem) Run(maxCycles uint) (uint, error) {
 
 	for i = 0; i < maxCycles && !s.StopFlag; i++ {
 		s.InstructionCycle()
+	}
+
+	return i, nil
+}
+
+// Run the machine until STP is encountered or the given amount of cycles is reached.
+// At each cycle, the memory is printed and execution pauses shortly.
+// Returns the number of cycles executed.
+func (s *Ssem) RunAndPrint(maxCycles uint) (uint, error) {
+	var i uint
+
+	for i = 0; i < maxCycles && !s.StopFlag; i++ {
+		s.InstructionCycle()
+		fmt.Print(strings.Repeat("\033[A", 36))
+		fmt.Println(s)
+		time.Sleep(5 * time.Millisecond)
 	}
 
 	return i, nil

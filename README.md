@@ -8,12 +8,10 @@ This program aims at simulating accurately the SSEM while allowing to play with 
 
 # Test it
 
-**Not yet functional.**
-
 ```sh
-go run main.go samples/ssem/fibonacci.asm
+go run ./main.go --file ./samples/ssem/nightmare.snp --pretty --print
 ```
-The result will appear on the 28th line in binary.
+![Screenshot](docs/screenshot.png)
 
 # Roadmap
 
@@ -24,18 +22,18 @@ The result will appear on the 28th line in binary.
   - [x] Core logic (instruction set)
   - [x] Main loop
   - [ ] Validate accuracy (with literature and best known simulators)
-  - [ ] Improve readability (display option)
+  - [x] Improve readability (display option)
 - [x] Unit and functional tests
 - [ ] Interactive interface
-  - [ ] Base interface
+  - [x] Base interface
+  - [x] Display modes
   - [ ] User input
-  - [ ] Display modes
   - [ ] Scroll in store with arrows when terminal is too small
 - [ ] Improve interactive interface
   - [ ] Handle screen resize
   - [ ] Accurate speed execution
   - [ ] Help window
-
+*
 # SSEM specifications
 
 ## Main characteristics
