@@ -4,7 +4,7 @@ The SSEM, also known as the Manchester Baby was the first electronic stored-prog
 
 As it is very simple, it is a good subject to study the basic principles of computing.
 
-This program aims at simulating accurately the SSEM while allowing to play with it and tweak it.
+This program aims at simulating accurately the SSEM in its execution, while allowing to play with it and tweak it.
 
 # Test it
 
@@ -15,15 +15,17 @@ go run ./main.go --file ./samples/ssem/nightmare.snp --pretty --print
 
 # Roadmap
 
-- [ ] Core features
+- [x] Core features
   - [x] Representation of the machine's memory
   - [x] Read assembly files (.asm)
   - [x] Read binary representation files (.snp)
   - [x] Core logic (instruction set)
   - [x] Main loop
-  - [ ] Validate accuracy (with literature and best known simulators)
   - [x] Improve readability (display option)
 - [x] Unit and functional tests
+- [ ] Validate accuracy (with literature and best known simulators)
+  - [ ] [Function bits 13-15 in CI](https://curation.cs.manchester.ac.uk/computer50/www.computer50.org/mark1/prog98/ssemref.html)
+  - [ ] Test Flip Flop
 - [ ] Interactive interface
   - [x] Base interface
   - [x] Display modes
@@ -33,7 +35,7 @@ go run ./main.go --file ./samples/ssem/nightmare.snp --pretty --print
   - [ ] Handle screen resize
   - [ ] Accurate speed execution
   - [ ] Help window
-*
+
 # SSEM specifications
 
 ## Main characteristics

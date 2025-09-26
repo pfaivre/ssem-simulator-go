@@ -43,10 +43,15 @@ func (s *Store) DecodeInstruction(address Word) (Opcode, Word) {
 	return Opcode(opcode), Word(data)
 }
 
-func (s Store) String() string {
+func (s Store) String(ci Word) string {
 	builder := strings.Builder{}
 	builder.Grow(4096) // takes approximately 2304 bytes to print the store
 	for i, w := range s {
+		if i == int(ci) {
+			builder.WriteRune('>')
+		} else {
+			builder.WriteRune(' ')
+		}
 		AppendBinary(&builder, w)
 		o, d := s.DecodeInstruction(Word(i))
 		builder.WriteString(fmt.Sprintf(" %02d: %11d  %s %02d   \n", i, w, o, d))

@@ -28,12 +28,12 @@ const SSEM_OPCODE_MASK = 0b00000000000000000000000000000111
 
 const SSEM_DATA_MASK = 0b00000000000000000000000000011111
 
-// A machine has a store, a counter increment (ci) and an accumulator register (a)
+// Represents the state of the SSEM
 type Ssem struct {
-	store    Store
-	ci       Word
-	a        Word
-	StopFlag bool
+	store    Store // Main memory
+	ci       Word  // Counter Increment
+	a        Word  // Accumulator
+	StopFlag bool  // Halts the machine, set when STP instruction is executed
 }
 
 func NewSsem() *Ssem {
@@ -45,11 +45,12 @@ func NewSsem() *Ssem {
 func (s Ssem) String() string {
 	builder := strings.Builder{} // TODO: consider defining a long living builder to avoid constant allocation
 	builder.Grow(4096)           // takes around 2427 bytes to print the store
+	builder.WriteRune(' ')
 	AppendBinary(&builder, s.ci)
-	builder.WriteString(fmt.Sprintf(" CI: %11d\n", s.ci))
+	builder.WriteString(fmt.Sprintf(" CI: %11d\n ", s.ci))
 	AppendBinary(&builder, s.a)
 	builder.WriteString(fmt.Sprintf(" A : %11d\n\n", s.a))
-	builder.WriteString(fmt.Sprint(s.store))
+	builder.WriteString(s.store.String(s.ci))
 	return builder.String()
 }
 
@@ -223,6 +224,8 @@ func (s *Ssem) Execute(opcode Opcode, data Word) {
 	case SUB, SUB2:
 		s.a -= s.store[data]
 	case CMP:
+		// In the real machine, with CMP a Test Flip Flop is set when the accumulator is negative.
+		// On each instruction, if the Test Flip Flop is set, CI is incremented by 2 instead of 1.
 		if s.a < 0 {
 			s.ci += 1
 		}
@@ -251,7 +254,7 @@ func (s *Ssem) RunAndPrint(maxCycles uint) (uint, error) {
 
 	for i = 0; i < maxCycles && !s.StopFlag; i++ {
 		s.InstructionCycle()
-		fmt.Print(strings.Repeat("\033[A", 36))
+		fmt.Print(strings.Repeat("\033[A", 36)) // Print over the last one. TODO: can be optimised
 		fmt.Println(s)
 		time.Sleep(5 * time.Millisecond)
 	}
