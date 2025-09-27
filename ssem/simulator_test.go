@@ -3,6 +3,7 @@ package ssem
 import (
 	"strconv"
 	"testing"
+	"time"
 )
 
 func storeFromSnapshot(snp []string) Store {
@@ -90,9 +91,17 @@ func TestFunctionalAll(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(131)
-	if s.store != expected_store {
-		t.Errorf("failed Combined Functions Test")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 131, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store != expected_store {
+			t.Errorf("failed Combined Functions Test")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("combined Functions Test timed out")
 	}
 }
 
@@ -170,9 +179,17 @@ func TestFunctionalCmp1(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(300)
-	if s.store != expected_store {
-		t.Errorf("failed CMP1 Test")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 300, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store != expected_store {
+			t.Errorf("failed CMP1 Test")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("CMP1 Test timed out")
 	}
 }
 
@@ -250,9 +267,17 @@ func TestFunctionalCmp2(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(300)
-	if s.store != expected_store {
-		t.Errorf("failed CMP2 Test")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 300, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store != expected_store {
+			t.Errorf("failed CMP2 Test")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("CMP2 Test timed out")
 	}
 }
 
@@ -330,9 +355,17 @@ func TestFunctionalJmp1(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(31)
-	if s.store != expected_store {
-		t.Errorf("failed JMP1 Test")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 31, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store != expected_store {
+			t.Errorf("failed JMP1 Test")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("JMP1 Test timed out")
 	}
 }
 
@@ -411,9 +444,17 @@ func TestFunctionalJrp1(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(30)
-	if s.store != expected_store {
-		t.Errorf("failed JRP1 Test")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 30, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store != expected_store {
+			t.Errorf("failed JRP1 Test")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("JRP1 Test timed out")
 	}
 }
 
@@ -585,9 +626,17 @@ func TestFunctionalSto1(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(29)
-	if s.store != expected_store {
-		t.Errorf("failed STO1 Test")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 29, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store != expected_store {
+			t.Errorf("failed STO1 Test")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("STO1 Test timed out")
 	}
 }
 
@@ -665,9 +714,17 @@ func TestFunctionalSto2(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(29)
-	if s.store != expected_store {
-		t.Errorf("failed STO2 Test")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 29, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store != expected_store {
+			t.Errorf("failed STO2 Test")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("STO2 Test timed out")
 	}
 }
 
@@ -809,9 +866,17 @@ func TestFunctionalFactorct(t *testing.T) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(100000000)
-	if s.store[27] != 131072 {
-		t.Errorf("failed TestFunctionalFactorct")
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 100000000, 0)
+
+	select {
+	case <-cyclesChan:
+		if s.store[27] != 131072 {
+			t.Errorf("failed TestFunctionalFactorct")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("TestFunctionalFactorct timed out")
 	}
 }
 
@@ -863,7 +928,16 @@ func BenchmarkFactorct(b *testing.B) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(100000000)
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 100000000, 0)
+
+	select {
+	case <-cyclesChan:
+		return
+	case <-time.After(3 * time.Second):
+		b.Fatal("BenchmarkFactorct timed out")
+	}
 }
 
 func BenchmarkNightmare(b *testing.B) {
@@ -905,5 +979,14 @@ func BenchmarkNightmare(b *testing.B) {
 	s := NewSsem()
 	s.store = initial_store
 	s.StopFlag = false
-	s.Run(100000000)
+	cyclesChan := make(chan uint)
+
+	go s.Run(cyclesChan, 100000000, 0)
+
+	select {
+	case <-cyclesChan:
+		return
+	case <-time.After(1 * time.Minute): // TODO: check why it does not always time out here
+		b.Fatal("BenchmarkNightmare timed out")
+	}
 }

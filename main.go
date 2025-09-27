@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"pfaivre/ssem-simulator-go/ssem"
 	"strings"
+	"syscall"
 )
 
 func main() {
@@ -14,9 +16,9 @@ func main() {
 	fmt.Println()
 
 	filePath := flag.String("file", "", "Path to an asm or snp file to load")
-	pretty := flag.Bool("pretty", false, "Improve readability when printing the store")
-	printFlag := flag.Bool("print", false, "Print the store at every cycle with a small pause")
-	maxCycles := flag.Uint("max-cycles", 1000, "Maximum number of cycles to execute")
+	pretty := flag.Bool("pretty", true, "Improve readability when printing the store")
+	cyclesPerSec := flag.Uint("speed", 700, "Approximate target of number of instructions to execute per second. Set 0 for no limit.")
+	maxCycles := flag.Uint("max-cycles", 10000, "Maximum number of cycles to execute")
 	flag.Parse()
 
 	machine := ssem.NewSsem()
@@ -47,19 +49,25 @@ func main() {
 
 	fmt.Println(machine)
 
-	var cycles uint
-	var err error
+	cyclesChan := make(chan uint)
+	stopChan := make(chan bool)
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	if *printFlag {
-		cycles, err = machine.RunAndPrint(*maxCycles)
-	} else {
-		fmt.Printf("Computing up to %d cycles...\n\n", *maxCycles)
-		cycles, err = machine.Run(*maxCycles)
-	}
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(machine)
+	go machine.Run(cyclesChan, *maxCycles, *cyclesPerSec)
+	go machine.Printer(stopChan)
+
+	go func() {
+		s := <-signalChan
+		fmt.Printf("Received %s signal, terminating\n", s)
+		machine.StopFlag = true
+		cycles := <-cyclesChan
+		fmt.Printf("Stopped after %d cycles\n", cycles)
+		os.Exit(0)
+	}()
+
+	cycles := <-cyclesChan
+	<-stopChan
+
 	fmt.Printf("Stopped after %d cycles\n", cycles)
 }

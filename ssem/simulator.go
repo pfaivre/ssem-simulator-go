@@ -43,14 +43,14 @@ func NewSsem() *Ssem {
 }
 
 func (s Ssem) String() string {
-	builder := strings.Builder{} // TODO: consider defining a long living builder to avoid constant allocation
-	builder.Grow(4096)           // takes around 2427 bytes to print the store
+	builder := strings.Builder{} // TODO: consider defining a long living buffer to avoid constant allocation
+	builder.Grow(4096)           // takes around 2461 bytes to print the store
 	builder.WriteRune(' ')
 	AppendBinary(&builder, s.ci)
 	builder.WriteString(fmt.Sprintf(" CI: %11d\n ", s.ci))
 	AppendBinary(&builder, s.a)
 	builder.WriteString(fmt.Sprintf(" A : %11d\n\n", s.a))
-	builder.WriteString(s.store.String(s.ci))
+	s.store.Write(&builder, s.ci)
 	return builder.String()
 }
 
@@ -236,28 +236,32 @@ func (s *Ssem) Execute(opcode Opcode, data Word) {
 
 // Run the machine until STP is encountered or the given amount of cycles is reached.
 // Returns the number of cycles executed.
-func (s *Ssem) Run(maxCycles uint) (uint, error) {
+func (s *Ssem) Run(cyclesChan chan uint, maxCycles uint, cyclesPerSec uint) {
 	var i uint
 
-	for i = 0; i < maxCycles && !s.StopFlag; i++ {
-		s.InstructionCycle()
+	if cyclesPerSec > 0 {
+		sleepDuration := 1000 / time.Duration(cyclesPerSec) * time.Millisecond
+		for i = 0; i < maxCycles && !s.StopFlag; i++ {
+			s.InstructionCycle()
+			time.Sleep(sleepDuration)
+		}
+	} else {
+		for i = 0; i < maxCycles && !s.StopFlag; i++ {
+			s.InstructionCycle()
+		}
 	}
 
-	return i, nil
+	s.StopFlag = true
+	cyclesChan <- i
 }
 
-// Run the machine until STP is encountered or the given amount of cycles is reached.
-// At each cycle, the memory is printed and execution pauses shortly.
-// Returns the number of cycles executed.
-func (s *Ssem) RunAndPrint(maxCycles uint) (uint, error) {
-	var i uint
-
-	for i = 0; i < maxCycles && !s.StopFlag; i++ {
-		s.InstructionCycle()
+// Prints the machine repeatedly. Stops when the machine is stopped.
+func (s *Ssem) Printer(stopChan chan bool) {
+	for !s.StopFlag {
 		fmt.Print(strings.Repeat("\033[A", 36)) // Print over the last one. TODO: can be optimised
 		fmt.Println(s)
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(1000 / 60 * time.Millisecond)
 	}
 
-	return i, nil
+	stopChan <- true
 }

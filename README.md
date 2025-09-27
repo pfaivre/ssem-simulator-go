@@ -9,7 +9,7 @@ This program aims at simulating accurately the SSEM in its execution, while allo
 # Test it
 
 ```sh
-go run ./main.go --file ./samples/ssem/nightmare.snp --pretty --print
+go run ./main.go --file ./samples/ssem/nightmare.snp
 ```
 ![Screenshot](docs/screenshot.png)
 
@@ -29,6 +29,7 @@ go run ./main.go --file ./samples/ssem/nightmare.snp --pretty --print
 - [ ] Interactive interface
   - [x] Base interface
   - [x] Display modes
+  - [x] Goroutines for compute and display
   - [ ] User input
   - [ ] Scroll in store with arrows when terminal is too small
 - [ ] Improve interactive interface

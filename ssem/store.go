@@ -43,21 +43,17 @@ func (s *Store) DecodeInstruction(address Word) (Opcode, Word) {
 	return Opcode(opcode), Word(data)
 }
 
-func (s Store) String(ci Word) string {
-	builder := strings.Builder{}
-	builder.Grow(4096) // takes approximately 2304 bytes to print the store
+func (s Store) Write(b *strings.Builder, ci Word) {
 	for i, w := range s {
 		if i == int(ci) {
-			builder.WriteRune('>')
+			b.WriteRune('>')
 		} else {
-			builder.WriteRune(' ')
+			b.WriteRune(' ')
 		}
-		AppendBinary(&builder, w)
+		AppendBinary(b, w)
 		o, d := s.DecodeInstruction(Word(i))
-		builder.WriteString(fmt.Sprintf(" %02d: %11d  %s %02d   \n", i, w, o, d))
+		fmt.Fprintf(b, " %02d: %11d  %s %02d   \n", i, w, o, d)
 	}
-
-	return builder.String()
 }
 
 var BinaryDigitReplacer = strings.NewReplacer()
