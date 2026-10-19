@@ -279,5 +279,8 @@ func (s *Ssem) Printer(stopChan chan bool) {
 		time.Sleep(1000 / 60 * time.Millisecond)
 	}
 
+	// Print final state to ensure it's always displayed
+	print("\033[36A")
+	fmt.Println(s)
 	stopChan <- true
 }

@@ -57,17 +57,20 @@ func main() {
 	go machine.Run(cyclesChan, *maxCycles, *cyclesPerSec)
 	go machine.Printer(stopChan)
 
-	go func() {
-		s := <-signalChan
+	var cycles uint
+	select {
+	case cycles = <-cyclesChan:
+		// Normal completion: Run finished
+		machine.Stop()
+		<-stopChan
+		fmt.Printf("Stopped after %d cycles\n", cycles)
+	case s := <-signalChan:
+		// Signal received: stop the machine
 		fmt.Printf("Received %s signal, terminating\n", s)
 		machine.Stop()
-		cycles := <-cyclesChan
+		cycles = <-cyclesChan
+		<-stopChan
 		fmt.Printf("Stopped after %d cycles\n", cycles)
 		os.Exit(0)
-	}()
-
-	cycles := <-cyclesChan
-	<-stopChan
-
-	fmt.Printf("Stopped after %d cycles\n", cycles)
+	}
 }
