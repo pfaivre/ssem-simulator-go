@@ -8,6 +8,12 @@ This program aims at simulating accurately the SSEM in its execution, while allo
 
 # Test it
 
+If you have Nix on your system, you can enter a devenv like so:
+```sh
+nix shell nixpkgs#devenv -c devenv shell  # Open a Nix shell with devenv
+```
+Now you should have a shell with all dependencies installed (golang).
+
 ```sh
 go run ./main.go --file ./samples/ssem/nightmare.snp
 ```

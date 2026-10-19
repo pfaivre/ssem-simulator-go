@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	fmt.Println("SSEM Simulator, 2025 Pierre Faivre")
+	fmt.Println("SSEM Simulator, 2026 Pierre Faivre")
 	fmt.Println()
 
 	filePath := flag.String("file", "", "Path to an asm or snp file to load")
@@ -60,7 +60,7 @@ func main() {
 	go func() {
 		s := <-signalChan
 		fmt.Printf("Received %s signal, terminating\n", s)
-		machine.StopFlag = true
+		machine.Stop()
 		cycles := <-cyclesChan
 		fmt.Printf("Stopped after %d cycles\n", cycles)
 		os.Exit(0)

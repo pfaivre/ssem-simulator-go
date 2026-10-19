@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -30,19 +31,30 @@ const SSEM_DATA_MASK = 0b00000000000000000000000000011111
 
 // Represents the state of the SSEM
 type Ssem struct {
-	store    Store // Main memory
-	ci       Word  // Counter Increment
-	a        Word  // Accumulator
-	StopFlag bool  // Halts the machine, set when STP instruction is executed
+	store    Store       // Main memory
+	ci       Word        // Counter Increment
+	a        Word        // Accumulator
+	stopFlag atomic.Bool // Halts the machine, set when STP instruction is executed or Stop is called
 }
 
 func NewSsem() *Ssem {
-	return &Ssem{
-		StopFlag: true,
-	}
+	s := &Ssem{}
+	s.stopFlag.Store(true) // A new machine is stopped until a program is loaded
+	return s
 }
 
-func (s Ssem) String() string {
+// Requests the machine to stop.
+// Safe to call concurrently with Run and Printer, for example from a signal handler.
+func (s *Ssem) Stop() {
+	s.stopFlag.Store(true)
+}
+
+// Returns true when the machine is stopped or a stop was requested
+func (s *Ssem) IsStopped() bool {
+	return s.stopFlag.Load()
+}
+
+func (s *Ssem) String() string {
 	builder := strings.Builder{} // TODO: consider defining a long living buffer to avoid constant allocation
 	builder.Grow(4096)           // takes around 2461 bytes to print the store
 	builder.WriteRune(' ')
@@ -126,7 +138,7 @@ func (s *Ssem) ReadAsm(file_name string) error {
 	s.store = store
 	s.ci = 0
 	s.a = 0
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 
 	return readFile.Close()
 }
@@ -180,10 +192,14 @@ func (s *Ssem) ReadSnp(file_name string) error {
 		if len(l) <= 1 {
 			return fmt.Errorf("line %d: missing word for index %d", lineNumber, index)
 		}
+		word := strings.Trim(l[1], " ")
+		if len(word) == 0 {
+			return fmt.Errorf("line %d: missing word for index %d", lineNumber, index)
+		}
 		// Need to reverse the bit order as the SSEM stores number in reverse
-		w, err := strconv.ParseInt(Reverse(strings.Trim(l[1], " ")), 2, 33)
+		w, err := strconv.ParseInt(Reverse(word), 2, 33)
 		if err != nil {
-			return fmt.Errorf("line %d: unable to parse binary value '%s'", lineNumber, strings.Trim(l[1], " "))
+			return fmt.Errorf("line %d: unable to parse binary value '%s'", lineNumber, word)
 		}
 		store[index] = Word(w)
 	}
@@ -191,7 +207,7 @@ func (s *Ssem) ReadSnp(file_name string) error {
 	s.store = store
 	s.ci = 0
 	s.a = 0
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 
 	return readFile.Close()
 }
@@ -230,7 +246,7 @@ func (s *Ssem) Execute(opcode Opcode, data Word) {
 			s.ci += 1
 		}
 	case STP:
-		s.StopFlag = true
+		s.Stop()
 	}
 }
 
@@ -241,24 +257,24 @@ func (s *Ssem) Run(cyclesChan chan uint, maxCycles uint, cyclesPerSec uint) {
 
 	if cyclesPerSec > 0 {
 		sleepDuration := 1000 / time.Duration(cyclesPerSec) * time.Millisecond
-		for i = 0; i < maxCycles && !s.StopFlag; i++ {
+		for i = 0; i < maxCycles && !s.stopFlag.Load(); i++ {
 			s.InstructionCycle()
 			time.Sleep(sleepDuration)
 		}
 	} else {
-		for i = 0; i < maxCycles && !s.StopFlag; i++ {
+		for i = 0; i < maxCycles && !s.stopFlag.Load(); i++ {
 			s.InstructionCycle()
 		}
 	}
 
-	s.StopFlag = true
+	s.Stop()
 	cyclesChan <- i
 }
 
 // Prints the machine repeatedly. Stops when the machine is stopped.
 func (s *Ssem) Printer(stopChan chan bool) {
-	for !s.StopFlag {
-		fmt.Print(strings.Repeat("\033[A", 36)) // Print over the last one. TODO: can be optimised
+	for !s.stopFlag.Load() {
+		print("\033[36A") // Print over the last one.
 		fmt.Println(s)
 		time.Sleep(1000 / 60 * time.Millisecond)
 	}

@@ -1,7 +1,9 @@
 package ssem
 
 import (
+	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -90,7 +92,7 @@ func TestFunctionalAll(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 131, 0)
@@ -178,7 +180,7 @@ func TestFunctionalCmp1(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 300, 0)
@@ -266,7 +268,7 @@ func TestFunctionalCmp2(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 300, 0)
@@ -354,7 +356,7 @@ func TestFunctionalJmp1(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 31, 0)
@@ -443,7 +445,7 @@ func TestFunctionalJrp1(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 30, 0)
@@ -531,7 +533,7 @@ func TestFunctionalLdn1(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 
 	var valuesOfA [34]Word
 	for i := range 34 {
@@ -625,7 +627,7 @@ func TestFunctionalSto1(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 29, 0)
@@ -713,7 +715,7 @@ func TestFunctionalSto2(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 29, 0)
@@ -803,7 +805,7 @@ func TestFunctionalSub1(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 
 	var valuesOfA [16]Word
 	for i := range 16 {
@@ -865,7 +867,7 @@ func TestFunctionalFactorct(t *testing.T) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 100000000, 0)
@@ -927,7 +929,7 @@ func BenchmarkFactorct(b *testing.B) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 100000000, 0)
@@ -978,7 +980,7 @@ func BenchmarkNightmare(b *testing.B) {
 
 	s := NewSsem()
 	s.store = initial_store
-	s.StopFlag = false
+	s.stopFlag.Store(false)
 	cyclesChan := make(chan uint)
 
 	go s.Run(cyclesChan, 100000000, 0)
@@ -988,5 +990,122 @@ func BenchmarkNightmare(b *testing.B) {
 		return
 	case <-time.After(1 * time.Minute): // TODO: check why it does not always time out here
 		b.Fatal("BenchmarkNightmare timed out")
+	}
+}
+
+func TestSsemString(t *testing.T) {
+	s := NewSsem()
+	s.store[0] = Word(STP) << OPCODE_START
+	s.store[5] = Word(LDN)<<OPCODE_START | 31
+	s.ci = 5
+	s.a = -12
+
+	out := s.String()
+
+	if !strings.Contains(out, " CI: ") {
+		t.Errorf("output should contain the CI line")
+	}
+	if !strings.Contains(out, " A : ") {
+		t.Errorf("output should contain the accumulator line")
+	}
+	if got := strings.Count(out, "\n"); got != 3+WORD_COUNT {
+		t.Errorf("output has %d lines, want %d", got, 3+WORD_COUNT)
+	}
+
+	lines := strings.Split(out, "\n")
+	// The store starts on the fourth line: CI, accumulator, empty line
+	if !strings.HasPrefix(lines[3+5], ">") {
+		t.Errorf("store line 5 should start with '>' as it is pointed at by CI, got %q", lines[3+5])
+	}
+	if !strings.Contains(lines[3+5], " 05:       16415  LDN 31   ") {
+		t.Errorf("store line 5 should contain the decoded LDN instruction, got %q", lines[3+5])
+	}
+}
+
+// Runs the machine with a limited speed and checks that all cycles are executed
+func TestRunSpeedLimited(t *testing.T) {
+	s := NewSsem()
+	s.stopFlag.Store(false)
+	cyclesChan := make(chan uint, 1)
+
+	s.Run(cyclesChan, 3, 1000) // 1000 cycles per second, so around 3 ms
+
+	select {
+	case cycles := <-cyclesChan:
+		if cycles != 3 {
+			t.Errorf("executed %d cycles, want 3", cycles)
+		}
+	default:
+		t.Fatal("Run did not return")
+	}
+	if !s.IsStopped() {
+		t.Errorf("Run should set StopFlag when the maximum amount of cycles is reached")
+	}
+}
+
+// Runs the machine until STP is executed and checks that Run stops early
+func TestRunStopsAtStp(t *testing.T) {
+	s := NewSsem()
+	s.store[1] = Word(STP) << OPCODE_START // First instruction executed, CI is incremented before execution
+	s.stopFlag.Store(false)
+	cyclesChan := make(chan uint, 1)
+
+	go s.Run(cyclesChan, 100, 0)
+
+	select {
+	case cycles := <-cyclesChan:
+		if cycles != 1 {
+			t.Errorf("executed %d cycles, want 1", cycles)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Run did not return")
+	}
+}
+
+func TestPrinter(t *testing.T) {
+	s := NewSsem()
+	s.store[0] = Word(STP) << OPCODE_START
+	s.stopFlag.Store(false)
+
+	// Replace standard output with a pipe to capture what Printer prints
+	stdout := os.Stdout
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = writer
+	defer func() {
+		os.Stdout = stdout
+		writer.Close()
+		reader.Close()
+	}()
+
+	stopChan := make(chan bool)
+	go s.Printer(stopChan)
+
+	// Printer needs a reader on the pipe, otherwise it would block once the
+	// pipe buffer is full
+	outputChan := make(chan string)
+	go func() {
+		buf := make([]byte, 8192)
+		n, _ := reader.Read(buf)
+		outputChan <- string(buf[:n])
+	}()
+
+	select {
+	case out := <-outputChan:
+		if !strings.Contains(out, " CI: ") {
+			t.Errorf("Printer output should contain the CI line, got %q", out)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Printer did not print anything")
+	}
+
+	s.Stop()
+
+	select {
+	case <-stopChan:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Printer did not signal that it stopped")
 	}
 }
