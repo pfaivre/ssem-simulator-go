@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"pfaivre/ssem-simulator-go/ssem"
-	"strings"
 	"syscall"
 )
 
@@ -24,7 +23,7 @@ func main() {
 	machine := ssem.NewSsem()
 
 	if *pretty {
-		ssem.BinaryDigitReplacer = strings.NewReplacer("0", ".", "1", "#")
+		ssem.BinaryDigits = [2]byte{'.', '#'}
 	}
 
 	if len(*filePath) > 0 {

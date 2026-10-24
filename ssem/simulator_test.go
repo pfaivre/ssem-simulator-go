@@ -1043,6 +1043,24 @@ func TestRunSpeedLimited(t *testing.T) {
 	}
 }
 
+// Runs the machine with an unreasonably high speed, the ticker period must stay positive
+func TestRunSpeedExtreme(t *testing.T) {
+	s := NewSsem()
+	s.stopFlag.Store(false)
+	cyclesChan := make(chan uint, 1)
+
+	go s.Run(cyclesChan, 2, 1_000_000_000_000)
+
+	select {
+	case cycles := <-cyclesChan:
+		if cycles != 2 {
+			t.Errorf("executed %d cycles, want 2", cycles)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Run did not return")
+	}
+}
+
 // Runs the machine until STP is executed and checks that Run stops early
 func TestRunStopsAtStp(t *testing.T) {
 	s := NewSsem()

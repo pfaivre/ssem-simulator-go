@@ -56,13 +56,18 @@ func (s Store) Write(b *strings.Builder, ci Word) {
 	}
 }
 
-var BinaryDigitReplacer = strings.NewReplacer()
+// Digits used to render binary values, least significant bit first.
+// Can be swapped for readability.
+var BinaryDigits = [2]byte{'0', '1'}
 
+// Appends the binary representation of the word, least significant bit first
 func AppendBinary(b *strings.Builder, w Word) {
+	var digits [32]byte
+	for i := range digits {
+		digits[i] = BinaryDigits[(w>>i)&1]
+	}
 	b.WriteString("\033[01;32m")
-	b.WriteString(
-		BinaryDigitReplacer.Replace(
-			Reverse(fmt.Sprintf("%032b", uint32(w)))))
+	b.Write(digits[:])
 	b.WriteString("\033[0m")
 }
 

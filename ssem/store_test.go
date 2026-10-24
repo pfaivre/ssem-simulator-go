@@ -52,8 +52,8 @@ func TestAppendBinary(t *testing.T) {
 
 func TestStoreWrite(t *testing.T) {
 	store := Store{}
-	store[0] = Word(STP) << OPCODE_START      // STP 00
-	store[5] = Word(LDN) << OPCODE_START | 31 // LDN 31
+	store[0] = Word(STP) << OPCODE_START    // STP 00
+	store[5] = Word(LDN)<<OPCODE_START | 31 // LDN 31
 
 	b := strings.Builder{}
 	store.Write(&b, 5)

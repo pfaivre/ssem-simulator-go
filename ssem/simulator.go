@@ -255,15 +255,21 @@ func (s *Ssem) Execute(opcode Opcode, data Word) {
 func (s *Ssem) Run(cyclesChan chan uint, maxCycles uint, cyclesPerSec uint) {
 	var i uint
 
+	// A ticker keeps a steady pace regardless of the execution time of each cycle
+	var ticker *time.Ticker
 	if cyclesPerSec > 0 {
-		sleepDuration := 1000 / time.Duration(cyclesPerSec) * time.Millisecond
-		for i = 0; i < maxCycles && !s.stopFlag.Load(); i++ {
-			s.InstructionCycle()
-			time.Sleep(sleepDuration)
+		period := time.Second / time.Duration(cyclesPerSec)
+		if period < 1 {
+			period = 1 // Guard against cyclesPerSec > 1_000_000_000, which would make the ticker panic
 		}
-	} else {
-		for i = 0; i < maxCycles && !s.stopFlag.Load(); i++ {
-			s.InstructionCycle()
+		ticker = time.NewTicker(period)
+		defer ticker.Stop()
+	}
+
+	for i = 0; i < maxCycles && !s.stopFlag.Load(); i++ {
+		s.InstructionCycle()
+		if ticker != nil {
+			<-ticker.C
 		}
 	}
 
