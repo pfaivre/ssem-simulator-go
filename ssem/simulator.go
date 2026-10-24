@@ -216,7 +216,10 @@ func (s *Ssem) ReadSnp(file_name string) error {
 func (s *Ssem) InstructionCycle() {
 	// Fetch
 	s.ci += 1
-	s.ci %= WORD_COUNT // CI loops back to the begining when it exceeds the store boundaries
+	// Only the five least significant bits of CI address the store.
+	// A JMP or JRP can leave a negative or oversized value in CI,
+	// so the modulo is normalized to wrap within the store boundaries.
+	s.ci = (s.ci%WORD_COUNT + WORD_COUNT) % WORD_COUNT
 
 	// Decode
 	opcode, data := s.store.DecodeInstruction(s.ci)

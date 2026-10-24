@@ -31,7 +31,8 @@ go run ./main.go --file ./samples/ssem/nightmare.snp
 - [x] Unit and functional tests
 - [ ] Validate accuracy (with literature and best known simulators)
   - [ ] [Function bits 13-15 in CI](https://curation.cs.manchester.ac.uk/computer50/www.computer50.org/mark1/prog98/ssemref.html)
-  - [ ] Test Flip Flop
+  - [x] Test Flip Flop
+  - [x] Jump with negative value
 - [ ] Interactive interface
   - [x] Base interface
   - [x] Display modes
