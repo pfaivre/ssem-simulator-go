@@ -1102,16 +1102,24 @@ func TestPrinter(t *testing.T) {
 	go s.Printer(stopChan)
 
 	// Printer needs a reader on the pipe, otherwise it would block once the
-	// pipe buffer is full
+	// pipe buffer is full. The cursor escape and the frame are written
+	// separately, so read until a complete frame has been captured.
 	outputChan := make(chan string)
 	go func() {
 		buf := make([]byte, 8192)
-		n, _ := reader.Read(buf)
-		outputChan <- string(buf[:n])
+		var out []byte
+		for !strings.Contains(string(out), " CI: ") {
+			n, _ := reader.Read(buf)
+			out = append(out, buf[:n]...)
+		}
+		outputChan <- string(out)
 	}()
 
 	select {
 	case out := <-outputChan:
+		if !strings.HasPrefix(out, "\033[36A") {
+			t.Errorf("Printer output should start with the cursor escape, got %q", out)
+		}
 		if !strings.Contains(out, " CI: ") {
 			t.Errorf("Printer output should contain the CI line, got %q", out)
 		}

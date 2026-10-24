@@ -280,13 +280,13 @@ func (s *Ssem) Run(cyclesChan chan uint, maxCycles uint, cyclesPerSec uint) {
 // Prints the machine repeatedly. Stops when the machine is stopped.
 func (s *Ssem) Printer(stopChan chan bool) {
 	for !s.stopFlag.Load() {
-		print("\033[36A") // Print over the last one.
+		fmt.Print("\033[36A") // Print over the last one.
 		fmt.Println(s)
 		time.Sleep(1000 / 60 * time.Millisecond)
 	}
 
 	// Print final state to ensure it's always displayed
-	print("\033[36A")
+	fmt.Print("\033[36A")
 	fmt.Println(s)
 	stopChan <- true
 }
